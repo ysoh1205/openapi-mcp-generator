@@ -106,43 +106,7 @@ async function runGenerator(options: CliOptions & { force?: boolean }) {
   const outputDir = options.output;
   const inputSpec = options.input;
 
-  const srcDir = path.join(outputDir, 'src');
-  const serverFilePath = path.join(srcDir, 'index.ts');
-  const packageJsonPath = path.join(outputDir, 'package.json');
-  const tsconfigPath = path.join(outputDir, 'tsconfig.json');
-  const gitignorePath = path.join(outputDir, '.gitignore');
-  const eslintPath = path.join(outputDir, '.eslintrc.json');
-  const prettierPath = path.join(outputDir, '.prettierrc');
-  const jestConfigPath = path.join(outputDir, 'jest.config.js');
-  const envExamplePath = path.join(outputDir, '.env.example');
-  const docsDir = path.join(outputDir, 'docs');
-  const oauth2DocsPath = path.join(docsDir, 'oauth2-configuration.md');
-
-  // Web server files (if requested)
-  const webServerPath = path.join(srcDir, 'web-server.ts');
-  const publicDir = path.join(outputDir, 'public');
-  const indexHtmlPath = path.join(publicDir, 'index.html');
-
-  // StreamableHTTP files (if requested)
-  const streamableHttpPath = path.join(srcDir, 'streamable-http.ts');
-
   try {
-    // Check if output directory exists and is not empty
-    if (!options.force) {
-      try {
-        const dirExists = await fs.stat(outputDir).catch(() => false);
-        if (dirExists) {
-          const files = await fs.readdir(outputDir);
-          if (files.length > 0) {
-            console.error(`Error: Output directory ${outputDir} already exists and is not empty.`);
-            console.error('Use --force to overwrite existing files.');
-            process.exit(1);
-          }
-        }
-      } catch (err) {
-        // Directory doesn't exist, which is fine
-      }
-    }
 
     // Parse OpenAPI spec
     console.error(`Parsing OpenAPI spec: ${inputSpec}`);
@@ -157,105 +121,8 @@ async function runGenerator(options: CliOptions & { force?: boolean }) {
     console.error('Generating server code...');
     const serverTsContent = generateMcpServerCode(api, options, serverName, serverVersion);
 
-    console.error('Generating package.json...');
-    const packageJsonContent = generatePackageJson(
-      serverName,
-      serverVersion,
-      options.transport as TransportType
-    );
-
-    console.error('Generating tsconfig.json...');
-    const tsconfigJsonContent = generateTsconfigJson();
-
-    console.error('Generating .gitignore...');
-    const gitignoreContent = generateGitignore();
-
-    console.error('Generating ESLint config...');
-    const eslintConfigContent = generateEslintConfig();
-
-    console.error('Generating Prettier config...');
-    const prettierConfigContent = generatePrettierConfig();
-
-    console.error('Generating Jest config...');
-    const jestConfigContent = generateJestConfig();
-
-    console.error('Generating .env.example file...');
-    const envExampleContent = generateEnvExample(api.components?.securitySchemes);
-
-    console.error('Generating OAuth2 documentation...');
-    const oauth2DocsContent = generateOAuth2Docs(api.components?.securitySchemes);
-
-    console.error(`Creating project directory structure at: ${outputDir}`);
-    await fs.mkdir(srcDir, { recursive: true });
-
-    await fs.writeFile(serverFilePath, serverTsContent);
-    console.error(` -> Created ${serverFilePath}`);
-
-    await fs.writeFile(packageJsonPath, packageJsonContent);
-    console.error(` -> Created ${packageJsonPath}`);
-
-    await fs.writeFile(tsconfigPath, tsconfigJsonContent);
-    console.error(` -> Created ${tsconfigPath}`);
-
-    await fs.writeFile(gitignorePath, gitignoreContent);
-    console.error(` -> Created ${gitignorePath}`);
-
-    await fs.writeFile(eslintPath, eslintConfigContent);
-    console.error(` -> Created ${eslintPath}`);
-
-    await fs.writeFile(prettierPath, prettierConfigContent);
-    console.error(` -> Created ${prettierPath}`);
-
-    await fs.writeFile(jestConfigPath, jestConfigContent);
-    console.error(` -> Created ${jestConfigPath}`);
-
-    await fs.writeFile(envExamplePath, envExampleContent);
-    console.error(` -> Created ${envExamplePath}`);
-
-    // Only write OAuth2 docs if there are OAuth2 security schemes
-    if (oauth2DocsContent.includes('No OAuth2 security schemes defined')) {
-      console.error(` -> No OAuth2 security schemes found, skipping documentation`);
-    } else {
-      await fs.mkdir(docsDir, { recursive: true });
-      await fs.writeFile(oauth2DocsPath, oauth2DocsContent);
-      console.error(` -> Created ${oauth2DocsPath}`);
-    }
-
-    // Generate web server files if web transport is requested
-    if (options.transport === 'web') {
-      console.error('Generating web server files...');
-
-      // Generate web server code
-      const webServerCode = generateWebServerCode(options.port || 3000);
-      await fs.writeFile(webServerPath, webServerCode);
-      console.error(` -> Created ${webServerPath}`);
-
-      // Create public directory and index.html
-      await fs.mkdir(publicDir, { recursive: true });
-
-      // Generate test client
-      const indexHtmlContent = generateTestClientHtml(serverName);
-      await fs.writeFile(indexHtmlPath, indexHtmlContent);
-      console.error(` -> Created ${indexHtmlPath}`);
-    }
-
-    // Generate streamable HTTP files if streamable-http transport is requested
-    if (options.transport === 'streamable-http') {
-      console.error('Generating StreamableHTTP server files...');
-
-      // Generate StreamableHTTP server code
-      const streamableHttpCode = generateStreamableHttpCode(options.port || 3000);
-      await fs.writeFile(streamableHttpPath, streamableHttpCode);
-      console.error(` -> Created ${streamableHttpPath}`);
-
-      // Create public directory and index.html
-      await fs.mkdir(publicDir, { recursive: true });
-
-      // Generate test client
-      const indexHtmlContent = generateStreamableHttpClientHtml(serverName);
-      await fs.writeFile(indexHtmlPath, indexHtmlContent);
-      console.error(` -> Created ${indexHtmlPath}`);
-    }
+    const toolsPath = path.join(outputDir, "tools.json")
+    await fs.writeFile(toolsPath, JSON.stringify(serverTsContent, null, 2), "utf-8")
 
     console.error('\n---');
     console.error(`MCP server project '${serverName}' successfully generated at: ${outputDir}`);
